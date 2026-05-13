@@ -1,0 +1,9 @@
+[Unit]
+Description=B&K 2245 Logger (one-shot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /home/pi/bk2245_logger.py
+User=pi
