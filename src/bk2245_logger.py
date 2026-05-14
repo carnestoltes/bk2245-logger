@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 LOGFILE = "/home/pi/bk2245-logger/data/bk2245.csv"
-API_PATH = "/api/measurement"
+API_PATH = "webxi/Applications/SLM/Outputs"
 TIMEOUT = 0.5
 
 
@@ -57,6 +57,7 @@ def save(data):
 
     row = {
         "timestamp": datetime.utcnow().isoformat(),
+        "laf": data.get("LAF"),
         "laeq": data.get("LAeq"),
         "lmax": data.get("Lmax"),
         "lpeak": data.get("LPeak"),
