@@ -1,6 +1,7 @@
-# B&K 2245 Raspberry Pi Logger
+# B&K 2245 Raspberry Pi Logger & WebSocket Gateway
 
-This project collects sound level measurements from a Brüel & Kjær 2245 sound level meter via HTTP API and stores them locally in CSV format using a Raspberry Pi.
+This project collects measurement data from a Brüel & Kjær 2245 sound level meter via its HTTP (WebXi) API using a Raspberry Pi.  
+It stores data locally and optionally exposes it in real time using a WebSocket server.
 
 ---
 
@@ -8,9 +9,9 @@ This project collects sound level measurements from a Brüel & Kjær 2245 sound 
 
 - Auto-detects B&K device over USB Ethernet
 - Reads measurement via HTTP API
-- Logs data every 10 minutes
-- Stores results in CSV format
-- Runs automatically via systemd timer
+- Real-time WebSocket streaming
+- Works with systemd service (auto-start on boot)
+- Supports NAT/port forwarding for remote access
 
 ---
 
@@ -35,25 +36,32 @@ cd bk2245-logger
 ```
 ```bash
 sudo cp systemd/bk2245.service /etc/systemd/system/
-sudo cp systemd/bk2245.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now bk2245.timer
+sudo systemctl enable bk2245.service
+sudo systemctl start bk2245.service
 ```
 ## Debug
 
 ```bash
 journalctl -u bk2245.service -f
-systemctl list-timers
-```
-## Considerations
-
-```bash
-arp -a IP_sonometer_network
-nmap -Pn IP_sonometer_network
-nmap -sV IP_sonometer_network
 ```
 
+## Run Locally
+
 ```bash
-ip addr add IP_range_sonometer dev usbx
-ip link set usbx up
+uvicorn app:app --host 0.0.0.0 --port 5003
+```
+
+## WebSocket Test
+
+```bash
+npm install -g wscat
+wscat -c ws://IP_sonometer/ws
+```
+
+## WebSocket Test NAT
+
+```bash
+http://PUBLIC_IP:5003
+ws://your-domain:5003/ws
 ```
