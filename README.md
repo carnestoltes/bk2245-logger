@@ -45,3 +45,15 @@ sudo systemctl enable --now bk2245.timer
 journalctl -u bk2245.service -f
 systemctl list-timers
 ```
+## Considerations
+
+```bash
+arp -a IP_sonometer_network
+nmap -Pn IP_sonometer_network
+nmap -sV IP_sonometer_network
+```
+
+```bash
+ip addr add IP_range_sonometer dev usbx
+ip link set usbx up
+```

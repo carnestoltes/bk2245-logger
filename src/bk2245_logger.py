@@ -4,6 +4,7 @@ import urllib3
 from fastapi import FastAPI, WebSocket
 from datetime import datetime
 
+<<<<<<< HEAD
 urllib3.disable_warnings()
 
 app = FastAPI()
@@ -14,6 +15,11 @@ latest_measurement = {
     "timestamp": None,
     "LFA": None
 }
+=======
+LOGFILE = "/home/pi/bk2245-logger/data/bk2245.csv"
+API_PATH = "webxi/Applications/SLM/Outputs"
+TIMEOUT = 0.5
+>>>>>>> 6233ab5ce21a0d0f4283d3e01d3a2833ca57f570
 
 
 # ------------------------
@@ -54,12 +60,33 @@ async def startup_event():
     asyncio.create_task(poll_bk())
 
 
+<<<<<<< HEAD
 # ------------------------
 # HTTP endpoint
 # ------------------------
 @app.get("/")
 def root():
     return latest_measurement
+=======
+def save(data):
+    file_exists = Path(LOGFILE).exists()
+
+    row = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "laf": data.get("LAF"),
+        "laeq": data.get("LAeq"),
+        "lmax": data.get("Lmax"),
+        "lpeak": data.get("LPeak"),
+    }
+
+    with open(LOGFILE, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=row.keys())
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(row)
+>>>>>>> 6233ab5ce21a0d0f4283d3e01d3a2833ca57f570
 
 
 # ------------------------
@@ -69,6 +96,21 @@ def root():
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
+<<<<<<< HEAD
     while True:
         await websocket.send_json(latest_measurement)
         await asyncio.sleep(5)
+=======
+    if not ip:
+        print("B&K not found")
+        return
+
+    data = get_measurement(ip)
+    save(data)
+
+    print(f"Logged data from {ip}")
+
+
+if __name__ == "__main__":
+    main()
+>>>>>>> 6233ab5ce21a0d0f4283d3e01d3a2833ca57f570
