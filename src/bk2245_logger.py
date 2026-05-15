@@ -1,88 +1,74 @@
-#!/usr/bin/env python3
-
-import subprocess
-import ipaddress
+import asyncio
 import requests
-import csv
-import re
+import urllib3
+from fastapi import FastAPI, WebSocket
 from datetime import datetime
-from pathlib import Path
 
-LOGFILE = "/home/pi/bk2245-logger/data/bk2245.csv"
-API_PATH = "/api/measurement"
-TIMEOUT = 0.5
+urllib3.disable_warnings()
 
+app = FastAPI()
 
-def get_usb_subnet():
-    try:
-        out = subprocess.check_output(["ip", "a", "show", "usb0"]).decode()
-    except:
-        out = subprocess.check_output(["ip", "a"]).decode()
+BK_URL = "https://IP_SONOMETER/webxi/Applications/SLM/Output"
 
-    m = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", out)
-    if not m:
-        return None
-
-    ip = m.group(1)
-    net = ".".join(ip.split(".")[:3]) + ".0/24"
-    return ipaddress.ip_network(net, strict=False)
+latest_measurement = {
+    "timestamp": None,
+    "LFA": None
+}
 
 
-def find_bk_ip():
-    subnet = get_usb_subnet()
-    if not subnet:
-        return None
+# ------------------------
+# Poll B&K every 5 seconds
+# ------------------------
+async def poll_bk():
+    global latest_measurement
 
-    for host in subnet.hosts():
-        url = f"http://{host}{API_PATH}"
+    while True:
         try:
-            r = requests.get(url, timeout=TIMEOUT)
-            if r.status_code == 200 and "LAeq" in r.text:
-                return str(host)
-        except:
-            pass
+            response = requests.get(
+                BK_URL,
+                verify=False,
+                timeout=3
+            )
 
-    return None
+            data = response.json()
 
+            # Adjust this path if JSON differs
+            latest_measurement = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "LFA": data.get("LFA")
+            }
 
-def get_measurement(ip):
-    url = f"http://{ip}{API_PATH}"
-    r = requests.get(url, timeout=2)
-    r.raise_for_status()
-    return r.json()
+            print(latest_measurement)
 
+        except Exception as e:
+            print("B&K error:", e)
 
-def save(data):
-    file_exists = Path(LOGFILE).exists()
-
-    row = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "laeq": data.get("LAeq"),
-        "lmax": data.get("Lmax"),
-        "lpeak": data.get("LPeak"),
-    }
-
-    with open(LOGFILE, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-
-        if not file_exists:
-            writer.writeheader()
-
-        writer.writerow(row)
+        await asyncio.sleep(5)
 
 
-def main():
-    ip = find_bk_ip()
-
-    if not ip:
-        print("B&K not found")
-        return
-
-    data = get_measurement(ip)
-    save(data)
-
-    print(f"Logged data from {ip}")
+# ------------------------
+# Startup background task
+# ------------------------
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(poll_bk())
 
 
-if __name__ == "__main__":
-    main()
+# ------------------------
+# HTTP endpoint
+# ------------------------
+@app.get("/")
+def root():
+    return latest_measurement
+
+
+# ------------------------
+# WebSocket endpoint
+# ------------------------
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    while True:
+        await websocket.send_json(latest_measurement)
+        await asyncio.sleep(5)

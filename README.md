@@ -23,6 +23,8 @@ This project collects sound level measurements from a Brüel & Kjær 2245 sound 
 Install dependencies:
 
 ```bash
+sudo apt update
+pip3 install fastapi uvicorn requests
 pip3 install -r requirements.txt
 ```
 ## Installation
