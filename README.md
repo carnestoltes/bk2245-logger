@@ -1,5 +1,9 @@
 # B&K 2245 Raspberry Pi Logger & WebSocket Gateway
 
+![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-async%20API-009688?logo=fastapi&logoColor=white)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Edge%20Device-C51A4A?logo=raspberrypi&logoColor=white)
+
 This project collects measurement data from a Brüel & Kjær 2245 sound level meter via its HTTP (WebXi) API using a Raspberry Pi.  
 Exposes it in real time using a WebSocket server.
 
@@ -30,7 +34,7 @@ B --> F[FastAPI / Uvicorn Server]
 F --> G[HTTP Endpoint /]
 F --> H[WebSocket /ws]
 
-H --> I[Remote Clients (wscat / browser / dashboard)]
+H --> I[Remote Clients wscat / browser / dashboard]
 ```
 
 ---
