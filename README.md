@@ -87,7 +87,7 @@ uvicorn src.bk2245_logger:app --host 0.0.0.0 --port 8000
 
 ## WebSocket Test
 
-This features nead node.js so if your Raspberry has a limited storage try to avoid it
+This features need node.js so if your Raspberry has a limited storage try to avoid it
 
 ```bash
 npm install -g wscat
