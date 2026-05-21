@@ -19,7 +19,7 @@ Exposes it in real time using a WebSocket server.
 ```mermaid
 flowchart TD
 
-A[B&K 2245 Sound Level Meter] -->|USB Ethernet (usb0)| B[Raspberry Pi]
+A[B&K 2245 Sound Level Meter] -->|USB Ethernet usb0| B[Raspberry Pi]
 
 B --> C[Python Polling Service]
 C --> D[Fetch measurement every 5s via HTTP API]
