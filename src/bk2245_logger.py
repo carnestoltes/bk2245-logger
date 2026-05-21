@@ -1,14 +1,16 @@
 import asyncio
+import socket
 import requests
 import urllib3
+import subprocess
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
 from datetime import datetime
 
 urllib3.disable_warnings()
 
-app = FastAPI()
-
-BK_URL = "https://IP_SONOMETER/webxi/Applications/SLM/Output"
+BK_IP = "192.168.0.251"
+BK_URL = f"https://{BK_IP}/webxi/Applications/SLM/Output"
 
 latest_measurement = {
     "timestamp": None,
@@ -16,12 +18,54 @@ latest_measurement = {
 }
 
 
+async def wait_for_usb0():
 
-# ------------------------
-# Poll B&K every 5 seconds
-# ------------------------
+    print("Waiting for usb0...")
+
+    while True:
+        try:
+            result = subprocess.run(
+                ["ip", "addr", "show", "usb0"],
+                capture_output=True,
+                text=True
+            )
+
+            if "inet " in result.stdout:
+                print("usb0 ready")
+                return
+
+        except Exception as e:
+            print("usb0 check error:", e)
+
+        await asyncio.sleep(2)
+
+
+async def wait_for_bk():
+
+    print("Waiting for B&K...")
+
+    while True:
+        try:
+            requests.get(
+                BK_URL,
+                verify=False,
+                timeout=3
+            )
+
+            print("B&K reachable")
+            return
+
+        except Exception:
+            pass
+
+        await asyncio.sleep(2)
+
+
 async def poll_bk():
     global latest_measurement
+
+    await wait_for_usb0()
+    await wait_for_bk()
 
     while True:
         try:
@@ -33,7 +77,6 @@ async def poll_bk():
 
             data = response.json()
 
-            # Adjust this path if JSON differs
             latest_measurement = {
                 "timestamp": datetime.utcnow().isoformat(),
                 "LFA": data.get("LFA")
@@ -47,31 +90,29 @@ async def poll_bk():
         await asyncio.sleep(5)
 
 
-# ------------------------
-# Startup background task
-# ------------------------
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(poll_bk())
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+
+    task = asyncio.create_task(poll_bk())
+
+    yield
+
+    task.cancel()
 
 
-# ------------------------
-# HTTP endpoint
-# ------------------------
+app = FastAPI(lifespan=lifespan)
+
+
 @app.get("/")
 def root():
     return latest_measurement
 
-# ------------------------
-# WebSocket endpoint
-# ------------------------
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
+
     await websocket.accept()
 
     while True:
         await websocket.send_json(latest_measurement)
         await asyncio.sleep(5)
-
-
-

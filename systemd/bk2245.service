@@ -1,12 +1,15 @@
 [Unit]
-Description=B&K WebSocket Gateway
-After=network.target
+Description=B&K 2245 WebSocket Gateway
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-User=root
-WorkingDirectory=/home/pi/bk2245
-ExecStart=/usr/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 80
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/bk2245-logger
+ExecStart=/home/pi/bk2245-logger/.venv/bin/uvicorn src.bk2245_logger:app --host 0.0.0.0 --port 8000
 Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
