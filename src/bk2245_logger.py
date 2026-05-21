@@ -78,7 +78,7 @@ async def poll_bk():
             data = response.json()
 
             latest_measurement = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
                 "LFA": data.get("LFA")
             }
 
