@@ -49,7 +49,7 @@ journalctl -u bk2245.service -f
 ## Run Locally
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
+uvicorn bk2245_logger:app --host 0.0.0.0 --port 8000
 ```
 
 ## WebSocket Test
