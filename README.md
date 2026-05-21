@@ -44,7 +44,7 @@ H --> I[Remote Clients wscat / browser / dashboard]
 
 - Raspberry Pi (tested on Pi 2B)
 - Python 3
-- Internet / local network access to B&K 2245 (remember we work with USB CDC ECM/RNDIS virtual network interface)(Ethernet over USB)
+- Internet / local network access to B&K 2245 (remember we work with **USB CDC ECM/RNDIS** virtual network interface)(Ethernet over USB)
 
 ## Installation
 
