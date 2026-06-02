@@ -10,7 +10,8 @@ from datetime import datetime
 urllib3.disable_warnings()
 
 BK_IP = "192.168.0.251"
-BK_URL = f"https://{BK_IP}/webxi/Applications/SLM/Outputs"
+BK_Time = f"https://{BK_IP}/webxi/Applications/SLM/Outputs/StartTime"
+BK_LFA = f"https://{BK_IP}/webxi/Applications/SLM/Outputs/LFA"
 
 latest_measurement = {
     "timestamp": None,
@@ -72,39 +73,34 @@ async def poll_bk():
     global latest_measurement
 
     #await configure_usb0()
-    await wait_for_bk()
-
+    #await wait_for_bk()
+    
     while True:
         try:
-            response = requests.get(
-                BK_URL,
-                verify=False,
-                timeout=3
-            )
+            r1 = requests.get(BK_Time, timeout=3)
+            latest_measurement["timestamp"] = r1.text.strip()
 
-            data = response.json()
-
-            latest_measurement = {
-                "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
-                "LFA": data.get("LFA")
-            }
-
-            print(latest_measurement)
+            r2 = requests.get(BK_LFA, timeout=3)
+            latest_measurement["LFA"] = r2.text.strip()
 
         except Exception as e:
-            print("B&K error:", e)
+            latest_measurement["error"] = str(e)
 
         await asyncio.sleep(5)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     task = asyncio.create_task(poll_bk())
 
-    yield
-
-    task.cancel()
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -120,6 +116,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
     await websocket.accept()
 
-    while True:
-        await websocket.send_json(latest_measurement)
-        await asyncio.sleep(5)
+    try:
+        while True:
+            await websocket.send_json(latest_measurement)
+            await asyncio.sleep(5)
+
+    except Exception:
+        # client disconnected or error
+        pass
