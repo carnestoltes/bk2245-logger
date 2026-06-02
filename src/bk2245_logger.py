@@ -1,98 +1,40 @@
-import asyncio
-import socket
-import requests
-import urllib3
-import subprocess
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket
-from datetime import datetime
+from contextlib import asynccontextmanager
+import asyncio
+import httpx
+import time
 
-urllib3.disable_warnings()
+# -----------------------------
+# CONFIG
+# -----------------------------
 
 BK_IP = "192.168.0.251"
-BK_Time = f"https://{BK_IP}/webxi/Applications/SLM/Outputs/StartTime"
-BK_LFA = f"https://{BK_IP}/webxi/Applications/SLM/Outputs/LFA"
+BK_Time = "https://{BK_IP}/webxi/Applications/SLM/Outputs/StartTime"
+BK_LFA = "https://{BK_IP}/webxi/Applications/SLM/Outputs/LFA"
 
-latest_measurement = {
-    "timestamp": None,
-    "LFA": None
-}
+POLL_INTERVAL = 5
 
+# -----------------------------
+# SHARED STATE (NO GLOBALS HACKING)
+# -----------------------------
+class State:
+    def __init__(self):
+        self.data = {
+            "Time": None,
+            "LFA": None,
+            "status": "init",
+            "last_update": None,
+            "errors": []
+        }
 
-#async def configure_usb0():
+state = State()
 
- #   IP = "192.168.0.253/24"
-
-  #  print("Waiting for usb0...")
-
-   # while True:
-    #    try:
-     #       result = await asyncio.to_thread(
-      #          subprocess.run,
-       #         ["ip", "addr", "show", "usb0"],
-        #        capture_output=True,
-         #       text=True
-          #  )
-
-            # Interface exists
-           # if result.returncode == 0:
-
-            #    print("usb0 detected")
-
-                # Bring interface up
-             #   await asyncio.to_thread(
-              #      subprocess.run,
-               #     ["sudo", "ip", "link", "set", "usb0", "up"],
-                #    check=True
-                #)
-
-                # Assign IP
-                #await asyncio.to_thread(
-                 #   subprocess.run,
-                  #  [
-                   #     "sudo",
-                    #    "ip",
-                     #   "addr",
-                      #  "add",
-                       # IP,
-                        #"dev",
-                        #"usb0"
-                    #],
-                    #check=False
-                #)
-
-                #print(f"Assigned {IP} to usb0")
-
-                #return
-
-        #except Exception as e:
-         #   print("usb0 config error:", e)
-
-        #await asyncio.sleep(2)
-async def poll_bk():
-    global latest_measurement
-
-    #await configure_usb0()
-    #await wait_for_bk()
-    
-    while True:
-        try:
-            r1 = requests.get(BK_Time, timeout=3)
-            latest_measurement["timestamp"] = r1.text.strip()
-
-            r2 = requests.get(BK_LFA, timeout=3)
-            latest_measurement["LFA"] = r2.text.strip()
-
-        except Exception as e:
-            latest_measurement["error"] = str(e)
-
-        await asyncio.sleep(5)
-
-
+# -----------------------------
+# FASTAPI LIFESPAN
+# -----------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     task = asyncio.create_task(poll_bk())
-
     try:
         yield
     finally:
@@ -105,22 +47,57 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# -----------------------------
+# ASYNC POLLING ENGINE
+# -----------------------------
+async def poll_bk():
+    timeout = httpx.Timeout(3.0)
 
+    async with httpx.AsyncClient(timeout=timeout) as client:
+
+        while True:
+            try:
+                # parallel requests (important improvement)
+                time_req = client.get(BK_Time)
+                laf_req = client.get(BK_LFA)
+                
+                time_resp, laf_resp  = await asyncio.gather(time_req, laf_req)
+
+                time_resp.raise_for_status()
+                laf_resp.raise_for_status()
+                
+                state.data["Time"] = time_resp.text.strip()
+                state.data["LFA"] = laf_resp.text.strip()
+                
+                state.data["status"] = "ok"
+                state.data["last_update"] = time.time()
+
+            except Exception as e:
+                state.data["status"] = "error"
+                state.data["errors"].append(str(e))
+
+            await asyncio.sleep(POLL_INTERVAL)
+
+
+# -----------------------------
+# REST ENDPOINT
+# -----------------------------
 @app.get("/")
-def root():
-    return latest_measurement
+async def root():
+    return state.data
 
 
+# -----------------------------
+# WEBSOCKET STREAM
+# -----------------------------
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-
+async def ws_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     try:
         while True:
-            await websocket.send_json(latest_measurement)
-            await asyncio.sleep(5)
+            await websocket.send_json(state.data)
+            await asyncio.sleep(1)
 
     except Exception:
-        # client disconnected or error
         pass
