@@ -43,6 +43,11 @@ flowchart TD
     end
 ```
 ---
+
+# Production Deployment & Automation
+
+To ensure a deterministic installation and high availability, the setup process has been streamlined into system automation commands.
+
 ## 1. Environment & Dependencies Setup
 
 Isolate the python environment and install production dependencies using asynchronous HTTP clients:
@@ -58,13 +63,13 @@ source .venv/bin/activate
 ### Clone & Install requirements
 
 ```bash
-git clone [https://github.com/carnestoltes/bk2245-logger.git](https://github.com/carnestoltes/bk2245-logger.git)
+git clone https://github.com/carnestoltes/bk2245-logger.git
 cd bk2245-logger
 pip3 install --upgrade pip
 pip3 install -r requirements.txt
 ```
 
-### 2.Systemd Service Daemonization (Self-Healing Configuration)
+### 2. Systemd Service Daemonization (Self-Healing Configuration)
 
 Deploy the service to the Linux system init daemon to ensure reliability:
 
@@ -72,12 +77,6 @@ Deploy the service to the Linux system init daemon to ensure reliability:
 sudo systemctl daemon-reload
 sudo systemctl enable bk2245.service
 sudo systemctl start bk2245.service
-```
-
-# Copy systemd unit file configuration
-
-```bash
-sudo cp systemd/bk2245.service /etc/systemd/system/
 ```
 
 # Operations & Troubleshooting (SRE Workflow)
