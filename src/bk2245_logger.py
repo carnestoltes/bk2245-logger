@@ -9,8 +9,8 @@ import time
 # -----------------------------
 
 BK_IP = "192.168.0.251"
-BK_Time = "https://{BK_IP}/webxi/Applications/SLM/Outputs/StartTime"
-BK_LFA = "https://{BK_IP}/webxi/Applications/SLM/Outputs/LFA"
+BK_Time = f"http://{BK_IP}/webxi/Applications/SLM/Outputs/StartTime"
+BK_LAF = f"http://{BK_IP}/webxi/Applications/SLM/Outputs/LAF"
 
 POLL_INTERVAL = 5
 
@@ -21,7 +21,7 @@ class State:
     def __init__(self):
         self.data = {
             "Time": None,
-            "LFA": None,
+            "LAF": None,
             "status": "init",
             "last_update": None,
             "errors": []
@@ -59,7 +59,7 @@ async def poll_bk():
             try:
                 # parallel requests (important improvement)
                 time_req = client.get(BK_Time)
-                laf_req = client.get(BK_LFA)
+                laf_req = client.get(BK_LAF)
                 
                 time_resp, laf_resp  = await asyncio.gather(time_req, laf_req)
 
@@ -67,7 +67,7 @@ async def poll_bk():
                 laf_resp.raise_for_status()
                 
                 state.data["Time"] = time_resp.text.strip()
-                state.data["LFA"] = laf_resp.text.strip()
+                state.data["LAF"] = laf_resp.text.strip()
                 
                 state.data["status"] = "ok"
                 state.data["last_update"] = time.time()
