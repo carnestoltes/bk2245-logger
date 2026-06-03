@@ -41,3 +41,69 @@ flowchart TD
     subgraph Cloud / Client Layer
         H --> I[Remote Dashboards / Browsers / SRE Monitoring Tools]
     end
+```
+---
+## 1. Environment & Dependencies Setup
+
+Isolate the python environment and install production dependencies using asynchronous HTTP clients:
+
+### Navigate to home directory, create and activate virtual environment
+
+```bash
+cd ~
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Clone & Install requirements
+
+```bash
+git clone [https://github.com/carnestoltes/bk2245-logger.git](https://github.com/carnestoltes/bk2245-logger.git)
+cd bk2245-logger
+pip3 install --upgrade pip
+pip3 install -r requirements.txt
+```
+
+### 2.Systemd Service Daemonization (Self-Healing Configuration)
+
+Deploy the service to the Linux system init daemon to ensure reliability:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable bk2245.service
+sudo systemctl start bk2245.service
+```
+
+# Copy systemd unit file configuration
+
+```bash
+sudo cp systemd/bk2245.service /etc/systemd/system/
+```
+
+# Operations & Troubleshooting (SRE Workflow)
+
+### Real-Time Log Inspection
+
+Monitor the health, internal connection metrics, and runtime behavior of the Edge service via journalctl:
+
+```bash
+journalctl -u bk2245.service -f -n 50
+```
+
+### Manual Development Runtime
+
+For debugging or local development testing without daemonization, expose the ASGI server to the local network:
+
+```bash
+uvicorn src.bk2245_logger:app --host 0.0.0.0 --port 8000 --reload
+```
+# Telemetry Verification (WebSocket Client)
+
+To run network verification tests without heavy dependencies like Node.js inside limited storage edge hardware, you can connect from an external monitoring instance:
+
+### From a remote operator workstation (Only if necessary beacuse has a big consumption of resources)
+
+```bash
+npm install -g wscat
+wscat -c ws://<RASPBERRY_PI_IP>:8000/ws
+```
