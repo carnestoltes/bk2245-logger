@@ -1,20 +1,20 @@
-# B&K 2245 Raspberry Pi Logger & WebSocket Gateway
+# Edge IoT Gateway: B&K 2245 Raspberry Pi Logger & WebSocket Streamer
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-async%20API-009688?logo=fastapi&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Edge%20Device-C51A4A?logo=raspberrypi&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-Systemd%20Service-F29111?logo=linux&logoColor=white)
 
-This project collects measurement data from a Brüel & Kjær 2245 sound level meter via its HTTP (WebXi) API using a Raspberry Pi.  
-Exposes it in real time using a WebSocket server.
+An enterprise-grade Edge Computing Gateway designed for industrial telemetry. This repository automates the data acquisition from a **Brüel & Kjær 2245 Sound Level Meter** via its WebXi HTTP API using a Linux-based Raspberry Pi, exposing the telemetry data in real-time through a high-performance **Async WebSocket Gateway**.
 
 ---
 
-## Features
+## Key Architectural Features
 
-- Auto-detects B&K device over USB Ethernet
-- Reads measurement via HTTP API
-- Real-time WebSocket streaming
-- Works with systemd service (auto-start on boot)
+- **Virtual Network Interface (USB CDC ECM/RNDIS):** Automates communication over an Ethernet-over-USB interface (`usb0`), managing localized networking between the sensor and the edge gateway.
+- **Asynchronous Data Pipeline:** Built on top of `FastAPI` and `HTTPX/Requests` to handle non-blocking asynchronous pooling and broadcasting.
+- **Self-Healing & Reliability:** Fully integrated with **Linux Systemd** providing auto-start on boot, automated crash recovery, and logging rotation.
+- **Real-Time Telemetry Streaming:** Implements WebSocket protocol (`/ws`) for low-latency concurrent data broadcasting to multiple remote clients/dashboards.
 
 ---
 
@@ -22,74 +22,22 @@ Exposes it in real time using a WebSocket server.
 
 ```mermaid
 flowchart TD
+    subgraph Physical Edge Layer
+        A[B&K 2245 Sound Level Meter] -->|USB CDC ECM / RNDIS - usb0| B[Raspberry Pi Edge Gateway]
+    end
 
-A[B&K 2245 Sound Level Meter] -->|USB Ethernet usb0| B[Raspberry Pi]
+    subgraph Linux Systemd Core
+        B --> C[Python Telemetry Service]
+        C --> D[Async Pooling Layer: WebXi HTTP API]
+        C --> E[Thread-Safe Memory State]
+    end
 
-B --> C[Python Polling Service]
-C --> D[Fetch measurement every 5s via HTTP API]
-C --> E[Store latest value in memory]
+    subgraph Transport & Routing Layer
+        B --> F[FastAPI / Uvicorn Server]
+        F --> G[REST API Endpoint: /]
+        F --> H[WebSocket Server: /ws]
+    end
 
-B --> F[FastAPI / Uvicorn Server]
-
-F --> G[HTTP Endpoint /]
-F --> H[WebSocket /ws]
-
-H --> I[Remote Clients wscat / browser / dashboard]
-```
-
----
-
-
-## Requirements
-
-- Raspberry Pi (tested on Pi 2B)
-- Python 3
-- Internet / local network access to B&K 2245 (remember we work with **USB CDC ECM/RNDIS** virtual network interface)(Ethernet over USB)
-
-## Installation
-
-```bash
-git clone https://github.com/carnestoltes/bk2245-logger.git
-cd bk2245-logger
-```
-```bash
-sudo cp systemd/bk2245.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable bk2245.service
-sudo systemctl start bk2245.service
-```
-
-You should have an environment for operate with Python, so let's create it
-
-```bash
-cd ~
-python3 -m venv .venv
-source .venv/bin/activate
-```
-Install dependencies:
-
-```bash
-pip3 install fastapi uvicorn requests httpx
-pip3 install -r requirements.txt
-```
-
-## Debug
-
-```bash
-journalctl -u bk2245.service -f
-```
-
-## Run Locally
-
-```bash
-uvicorn src.bk2245_logger:app --host 0.0.0.0 --port 8000
-```
-
-## WebSocket Test
-
-This features need node.js so if your Raspberry has a limited storage try to avoid it
-
-```bash
-npm install -g wscat
-wscat -c ws://IP_sonometer/ws
-```
+    subgraph Cloud / Client Layer
+        H --> I[Remote Dashboards / Browsers / SRE Monitoring Tools]
+    end
