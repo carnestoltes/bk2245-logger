@@ -72,8 +72,8 @@ async def initialize_hardware(client: httpx.AsyncClient):
 # BACKGROUND BINARY WEBSOCKET CLIENT
 # -----------------------------
 async def bk_websocket_client_task():
-    """ Connects to the B&K hardware stream, verifies packet type, 
-        and safely parses incoming binary data with strict boundary checks. """
+    """ Connects to the B&K hardware stream, parses incoming binary data, 
+        and populates the shared application state. """
     
     timeout = httpx.Timeout(5.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -93,32 +93,22 @@ async def bk_websocket_client_task():
                     while True:
                         message = await ws.recv()
                         
-                        # 1. HANDLE BINARY PACKETS Safely
-                        if isinstance(message, bytes):
-                            # CRITICAL BOUNDARY CHECK: 
-                            # We must have at least 36 bytes to read index 34 safely!
-                            if len(message) >= 36:
-                                sequence_id = struct.unpack_from("<h", message, 28)[0]
-                                value_length = struct.unpack_from("<i", message, 30)[0]
-                                raw_value = struct.unpack_from("<h", message, 34)[0]
-                                
-                                # Convert raw data into correct scale decibels (Value / 100)
-                                laeq_db = round(raw_value / 100.0, 2)
-                                
-                                # Update global state reactively
-                                state.data["LAeq"] = laeq_db
-                                state.data["last_update"] = time.time()
-                                print(f"Valid telemetry parsed: {laeq_db} dB (Length: {len(message)} bytes)")
-                            else:
-                                # This prevents the RangeError!
-                                print(f"Ignored short binary frame ({len(message)} bytes). Required minimum: 36.")
-                        
-                        # 2. HANDLE PLAIN TEXT PACKETS Safely
-                        elif isinstance(message, str):
-                            print(f"Hardware Status Message (Text): {message.strip()}")
-                            if "error" in message.lower() or "no response" in message.lower():
-                                state.data["status"] = "hardware_warning"
-                                state.data["error"] = message.strip()
+                        # Node-RED equivalent checking binary buffer length >= 36 bytes
+                        if isinstance(message, bytes) and len(message) >= 36:
+                            # Replicating your buffer parsing rules:
+                            # Offset 28: SequenceID (Int16, Little Endian)
+                            # Offset 30: ValueLength (Int32, Little Endian)
+                            # Offset 34: Raw dB value (Int16, Little Endian)
+                            sequence_id = struct.unpack_from("<h", message, 28)[0]
+                            value_length = struct.unpack_from("<i", message, 30)[0]
+                            raw_value = struct.unpack_from("<h", message, 34)[0]
+                            
+                            # Convert raw data into correct scale decibels (Value / 100)
+                            laeq_db = round(raw_value / 100.0, 2)
+                            
+                            # Update global state reactively
+                            state.data["LAeq"] = laeq_db
+                            state.data["last_update"] = time.time()
                             
             except Exception as e:
                 print(f"Connection or Parsing Error: {e}")
