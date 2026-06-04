@@ -72,8 +72,8 @@ async def initialize_hardware(client: httpx.AsyncClient):
 # BACKGROUND BINARY WEBSOCKET CLIENT
 # -----------------------------
 async def bk_websocket_client_task():
-    """ Connects to the B&K hardware stream, parses incoming binary data, 
-        and populates the shared application state. """
+    """ Connects to the B&K hardware stream, verifies packet type, 
+        and safely parses incoming binary data. """
     
     timeout = httpx.Timeout(5.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -93,22 +93,30 @@ async def bk_websocket_client_task():
                     while True:
                         message = await ws.recv()
                         
-                        # Node-RED equivalent checking binary buffer length >= 36 bytes
-                        if isinstance(message, bytes) and len(message) >= 36:
-                            # Replicating your buffer parsing rules:
-                            # Offset 28: SequenceID (Int16, Little Endian)
-                            # Offset 30: ValueLength (Int32, Little Endian)
-                            # Offset 34: Raw dB value (Int16, Little Endian)
-                            sequence_id = struct.unpack_from("<h", message, 28)[0]
-                            value_length = struct.unpack_from("<i", message, 30)[0]
-                            raw_value = struct.unpack_from("<h", message, 34)[0]
-                            
-                            # Convert raw data into correct scale decibels (Value / 100)
-                            laeq_db = round(raw_value / 100.0, 2)
-                            
-                            # Update global state reactively
-                            state.data["LAeq"] = laeq_db
-                            state.data["last_update"] = time.time()
+                        # 1. CRITICAL CHECK: Mimic Node-RED's "Buffer.isBuffer" rule
+                        if isinstance(message, bytes):
+                            if len(message) >= 36:
+                                # Replicating your buffer parsing rules safely:
+                                sequence_id = struct.unpack_from("<h", message, 28)[0]
+                                value_length = struct.unpack_from("<i", message, 30)[0]
+                                raw_value = struct.unpack_from("<h", message, 34)[0]
+                                
+                                # Convert raw data into correct scale decibels (Value / 100)
+                                laeq_db = round(raw_value / 100.0, 2)
+                                
+                                # Update global state reactively
+                                state.data["LAeq"] = laeq_db
+                                state.data["last_update"] = time.time()
+                            else:
+                                print(f"Received short binary packet ({len(message)} bytes), skipping.")
+                        
+                        # 2. HANDLE PLAIN TEXT PACKETS: (Where your error string came from!)
+                        elif isinstance(message, str):
+                            print(f"Hardware Status Message (Text): {message.strip()}")
+                            # If it's an error status from the machine, you can choose to update status:
+                            if "error" in message.lower() or "no response" in message.lower():
+                                state.data["status"] = "hardware_warning"
+                                state.data["error"] = message.strip()
                             
             except Exception as e:
                 print(f"Connection or Parsing Error: {e}")
@@ -116,7 +124,6 @@ async def bk_websocket_client_task():
                 state.data["error"] = str(e)
                 print("Re-initializing connection pipeline in 5 seconds...")
                 await asyncio.sleep(5)
-
 # -----------------------------
 # FASTAPI LIFESPAN
 # -----------------------------
