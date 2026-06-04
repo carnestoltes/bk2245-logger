@@ -146,6 +146,19 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # -----------------------------
+# IMPLEMENTATION: HTTP REST ENDPOINT (For cURL / GET requests)
+# -----------------------------
+@app.get("/data")
+async def get_current_metrics():
+    """ Replicates and returns the exact message currently managed 
+        by your high-speed WebSocket background task. """
+    return {
+        "LAeq": state.data["LAeq"],
+        "status": state.data["status"],
+        "error": state.data["error"]
+    }
+    
+# -----------------------------
 # OUTBOUND FASTAPI WEBSOCKET SERVER
 # -----------------------------
 @app.websocket("/ws")
