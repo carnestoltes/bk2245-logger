@@ -10,9 +10,9 @@ import time
 # CONFIG
 # -----------------------------
 BK_IP = "192.168.0.251"
-BASE_URL = f"http://{BK_IP}/webxi/applications/slm"
-STREAMS_URL = f"http://{BK_IP}/WebXi/Streams"
-BK_WS_URL = f"ws://{BK_IP}/WebXi/Streams/1"
+BASE_URL = f"http://{BK_IP}/webxi/Applications/SLM"
+STREAMS_URL = f"http://{BK_IP}/webxi/Streams"
+BK_WS_URL = f"ws://{BK_IP}/webxi/Streams/1"
 
 # -----------------------------
 # SHARED STATE
