@@ -2,7 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from contextlib import asynccontextmanager
 import asyncio
 import httpx
-import websockets  # Ensure you run: pip install websockets
+import websockets
 import struct
 import time
 
