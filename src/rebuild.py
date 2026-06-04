@@ -32,7 +32,7 @@ state = State()
 # HARDWARE INITIALIZATION (From Node-RED Flow)
 # -----------------------------
 async def initialize_hardware(client: httpx.AsyncClient):
-    print("🛠️ Sending setup configurations to Sound Level Meter...")
+    print("Sending setup configurations to Sound Level Meter...")
     
     # 1. Setup sound logging properties
     await client.put(f"{BASE_URL}/Setup", json={
@@ -47,7 +47,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
     })
     
     # 2. Flush older streams (0 to 21)
-    print("🧹 Flushing existing stream entries...")
+    print("Flushing existing stream entries...")
     for i in range(22):
         try:
             await client.delete(f"{STREAMS_URL}/{i}")
@@ -55,7 +55,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
             pass # Ignore if the stream index didn't exist
 
     # 3. Provision new WebSocket Stream wrapper for Sequence 6 (LAeq)
-    print("📡 Provisioning new WebSocket Stream wrapper...")
+    print("Provisioning new WebSocket Stream wrapper...")
     await client.post(STREAMS_URL, json={
         "ConnectionType": "WebSocket",
         "Name": "LAeqDNOTA",
@@ -66,7 +66,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
     # 4. Start recording calculations
     await client.put(f"{BASE_URL}?action=Stop")
     await client.put(f"{BASE_URL}?action=StartPause")
-    print("▶️ Recording started. Hardware sequence initialized successfully.")
+    print("Recording started. Hardware sequence initialized successfully.")
 
 # -----------------------------
 # BACKGROUND BINARY WEBSOCKET CLIENT
@@ -84,9 +84,9 @@ async def bk_websocket_client_task():
                 state.data["status"] = "connecting"
                 
                 # Establish client websocket link to the meter stream
-                print(f"🔌 Connecting to hardware stream: {BK_WS_URL}")
+                print(f"Connecting to hardware stream: {BK_WS_URL}")
                 async with websockets.connect(BK_WS_URL) as ws:
-                    print("🟢 Core Hardware Stream Link Active.")
+                    print("Core Hardware Stream Link Active.")
                     state.data["status"] = "connected"
                     state.data["error"] = None
                     
@@ -111,10 +111,10 @@ async def bk_websocket_client_task():
                             state.data["last_update"] = time.time()
                             
             except Exception as e:
-                print(f"❌ Connection or Parsing Error: {e}")
+                print(f"Connection or Parsing Error: {e}")
                 state.data["status"] = "error"
                 state.data["error"] = str(e)
-                print("🔄 Re-initializing connection pipeline in 5 seconds...")
+                print("Re-initializing connection pipeline in 5 seconds...")
                 await asyncio.sleep(5)
 
 # -----------------------------
