@@ -73,7 +73,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
 # -----------------------------
 async def bk_websocket_client_task():
     """ Connects to the B&K hardware stream, verifies packet type, 
-        and safely parses incoming binary data. """
+        and safely parses incoming binary data with strict boundary checks. """
     
     timeout = httpx.Timeout(5.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -93,10 +93,11 @@ async def bk_websocket_client_task():
                     while True:
                         message = await ws.recv()
                         
-                        # 1. CRITICAL CHECK: Mimic Node-RED's "Buffer.isBuffer" rule
+                        # 1. HANDLE BINARY PACKETS Safely
                         if isinstance(message, bytes):
+                            # CRITICAL BOUNDARY CHECK: 
+                            # We must have at least 36 bytes to read index 34 safely!
                             if len(message) >= 36:
-                                # Replicating your buffer parsing rules safely:
                                 sequence_id = struct.unpack_from("<h", message, 28)[0]
                                 value_length = struct.unpack_from("<i", message, 30)[0]
                                 raw_value = struct.unpack_from("<h", message, 34)[0]
@@ -107,13 +108,14 @@ async def bk_websocket_client_task():
                                 # Update global state reactively
                                 state.data["LAeq"] = laeq_db
                                 state.data["last_update"] = time.time()
+                                print(f"Valid telemetry parsed: {laeq_db} dB (Length: {len(message)} bytes)")
                             else:
-                                print(f"Received short binary packet ({len(message)} bytes), skipping.")
+                                # This prevents the RangeError!
+                                print(f"Ignored short binary frame ({len(message)} bytes). Required minimum: 36.")
                         
-                        # 2. HANDLE PLAIN TEXT PACKETS: (Where your error string came from!)
+                        # 2. HANDLE PLAIN TEXT PACKETS Safely
                         elif isinstance(message, str):
                             print(f"Hardware Status Message (Text): {message.strip()}")
-                            # If it's an error status from the machine, you can choose to update status:
                             if "error" in message.lower() or "no response" in message.lower():
                                 state.data["status"] = "hardware_warning"
                                 state.data["error"] = message.strip()
