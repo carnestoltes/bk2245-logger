@@ -4,6 +4,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-async%20API-009688?logo=fastapi&logoColor=white)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-Edge%20Device-C51A4A?logo=raspberrypi&logoColor=white)
 ![Linux](https://img.shields.io/badge/Linux-Systemd%20Service-F29111?logo=linux&logoColor=white)
+![WebSockets](https://img.shields.io/badge/Python-WebSockets-F29111?logo=python&logoColor=white)
 
 An enterprise-grade Edge Computing Gateway designed for industrial telemetry. This repository automates the data acquisition from a **Brüel & Kjær 2245 Sound Level Meter** via its WebXi HTTP API using a Linux-based Raspberry Pi, exposing the telemetry data in real-time through a high-performance **Async WebSocket Gateway**.
 
