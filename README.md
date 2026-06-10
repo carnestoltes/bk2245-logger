@@ -7,10 +7,17 @@ cd /home/$USER/bk2245-logger
 ```
 
 # Download the new branch metadata from GitHub
+
+```bash
 git fetch origin
-
+```
 # Switch over to your new docker branch natively
-git checkout feature/dockerization
 
-# Run the system!
+```bash
+git checkout feature/dockerization
+```
+# Run the system
+
+```bash
 docker compose up -d --build
+```
