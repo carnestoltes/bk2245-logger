@@ -58,7 +58,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
     print("Provisioning new WebSocket Stream wrapper...")
     await client.post(STREAMS_URL, json={
         "ConnectionType": "WebSocket",
-        "Name": "LAeqDNOTA",
+        "Name": "LAeq",
         "Sequences": [6],
         "MessageTypes": ["SequenceData"]
     })
