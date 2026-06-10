@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  bk2245-streamer:
+    build:
+      context: .
+    container_name: bk2245-live-streamer
+    restart: always
+    network_mode: "host"
+    privileged: true
+    volumes:
+      - /etc/NetworkManager/conf.d:/host/etc/NetworkManager/conf.d
