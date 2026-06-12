@@ -47,11 +47,12 @@ flowchart TD
     end
     subgraph Transport Layer
         B --> F[FastAPI / Uvicorn Server]
-        F --> G[REST Endpoint: /]
-        F --> H[WebSocket Server: /ws]
+        F --> G[REST Endpoint: /data]
+        F --> H[REST Endpoint: /status]
+        F --> I[WebSocket Server: /ws]
     end
     subgraph Client Layer
-        H --> I[Dashboards / Monitoring Tools]
+        I --> J[Dashboards / Monitoring Tools]
     end
 ```
 
