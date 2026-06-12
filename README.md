@@ -16,7 +16,7 @@ The meter exposes measurements through its built-in WebXi HTTP API over a USB Et
 **Use case:** Automated acoustic monitoring in industrial or environmental settings, where legacy instruments need to feed data into modern IoT pipelines without manual intervention.
 
 ```
-B&K 2245 Meter ──USB (usb0)──► Raspberry Pi ──WebSocket /ws──► Dashboards / Cloud
+B&K 2245 Meter ── USB (usb0) ──► Raspberry Pi ── WebSocket /ws ──► Dashboards / Cloud
                                      │
                               Systemd service
                            (auto-start, self-healing)
