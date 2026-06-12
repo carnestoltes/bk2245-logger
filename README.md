@@ -35,7 +35,7 @@ B&K 2245 Meter ── USB (usb0) ──► Raspberry Pi ── WebSocket /ws ─
 
 ## System architecture
 
-```
+```mermaid
 flowchart TD
     subgraph Physical Edge Layer
         A[B&K 2245 Sound Level Meter] -->|USB CDC ECM / RNDIS - usb0| B[Raspberry Pi Edge Gateway]
