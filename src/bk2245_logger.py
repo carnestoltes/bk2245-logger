@@ -5,6 +5,7 @@ import httpx
 import websockets
 import struct
 import time
+import subprocess
 
 # -----------------------------
 # CONFIG
@@ -13,6 +14,8 @@ BK_IP = "192.168.2.251"
 BASE_URL = f"http://{BK_IP}/webxi/Applications/SLM"
 STREAMS_URL = f"http://{BK_IP}/webxi/Streams"
 BK_WS_URL = f"ws://{BK_IP}/webxi/Streams/1"
+
+SERVICE_NAME = "bk2245.service"
 
 # -----------------------------
 # SHARED STATE
@@ -58,7 +61,7 @@ async def initialize_hardware(client: httpx.AsyncClient):
     print("Provisioning new WebSocket Stream wrapper...")
     await client.post(STREAMS_URL, json={
         "ConnectionType": "WebSocket",
-        "Name": "LAeqDNOTA",
+        "Name": "LAeq",
         "Sequences": [6],
         "MessageTypes": ["SequenceData"]
     })
@@ -156,6 +159,51 @@ async def get_current_metrics():
         "LAeq": state.data["LAeq"],
         "status": state.data["status"],
         "error": state.data["error"]
+    }
+    
+# -----------------------------
+# IMPLEMENTATION: HTTP REST ENDPOINT (For cURL / GET status)
+# -----------------------------
+@app.get("/status")
+async def get_status():
+    try:
+        systemd_state = subprocess.check_output(
+            ["systemctl", "is-active", SERVICE_NAME],
+            text=True
+        ).strip()
+    except Exception as e:
+        systemd_state = f"unknown ({e})"
+
+    try:
+        logs = subprocess.check_output(
+            [
+                "journalctl",
+                "-u", SERVICE_NAME,
+                "-n", "10",
+                "--no-pager",
+                "-o", "short-iso"
+            ],
+            text=True
+        ).splitlines()
+    except Exception as e:
+        logs = [f"Unable to read journal: {e}"]
+
+    return {
+        "systemd_state": systemd_state,
+        "service": {
+            "status": state.data["status"],
+            "error": state.data["error"]
+        },
+        "telemetry": {
+            "LAeq": state.data["LAeq"],
+            "last_update": state.data["last_update"],
+            "seconds_since_update": (
+                round(time.time() - state.data["last_update"], 2)
+                if state.data["last_update"] > 0
+                else None
+            )
+        },
+        "logs": logs
     }
     
 # -----------------------------
